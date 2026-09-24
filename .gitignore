@@ -1,0 +1,22 @@
+# Byte-compiled / Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Data & Preprocessed Cache
+cache/
+cache_*/
+*.npz
+*.npy
+/content/cache_fundus_dual_branch/
+
+# PyTorch / Weights & Training artifacts
+*.pth
+*.pt
+checkpoints/
+runs/
+logs/
+wandb/
+.cache/
