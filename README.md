@@ -86,12 +86,14 @@ The framework decomposes the complex cross-center Diabetic Retinopathy grading c
 
 ---
 
-## 📂 Modular Package Architecture (`src/drdg`)
+## 📂 Repository Architecture & Package Structure
 
 ```
-src/drdg/
-├── config.py                 # Typed @dataclass configurations (strictly zero YAML)
+DR-ICCPR2026/
+├── __init__.py               # Core package metadata and public symbol exports
+├── config.py                 # Strongly-typed @dataclass configurations (zero YAML)
 ├── paths.py                  # Portable directory and path resolution utilities
+├── STANDALONE_REPO_GUIDE.md  # Standalone extraction and self-contained notebook strategy
 ├── data/
 │   ├── balancing.py          # Quota balancing (2,000 images per class pool)
 │   ├── collate.py            # Variable-length patch batch collator
@@ -102,13 +104,11 @@ src/drdg/
 │   ├── patches.py            # Sliding-window patch extraction (128x128, stride 96)
 │   ├── patient_ids.py        # Patient ID extraction regexes & multi-view isolation
 │   ├── preprocessing.py      # Circular ROI crop, Green Channel CLAHE & Ben Graham
+│   ├── registry.py           # Cohort metadata registry and path resolution
 │   ├── splits.py             # Patient-stratified split generator (GroupShuffleSplit)
 │   ├── transforms.py         # Albumentations global photometric/spatial augmentations
 │   ├── downloaders/          # Automated HTTP/Kaggle dataset downloaders
 │   └── preparation/          # Per-cohort raw ingestion & standardization scripts
-├── documents/
-│   ├── proposed-framework.pdf# High-resolution architectural framework diagram (PDF)
-│   └── proposed-framework.png# High-resolution architectural framework diagram (PNG)
 ├── models/
 │   ├── attention/            # CBAM, NonLocalBlock2D, and QuadrantTokenAggregator
 │   ├── streams/              # GlobalContextStream (ResNet-50) & LocalMILBranch (EffNet-B0)
@@ -130,6 +130,7 @@ src/drdg/
 │   ├── rdr.py                # Referable DR threshold calibration (tau*) & frozen evaluation
 │   ├── result_schema.py      # Formal LODOFoldResult serialization schema (Zero fabrication)
 │   ├── metrics.py            # QWK, Within-1 accuracy, per-grade sensitivity, accuracy
+│   ├── grade_metrics.py      # Granular per-grade sensitivity and specificity calculations
 │   ├── ordinal_metrics.py    # Mean Absolute Error (MAE), Off-by-2+ severe error rates
 │   └── statistics.py         # Wilcoxon signed-rank tests with Bonferroni correction
 ├── explainability/
@@ -137,22 +138,41 @@ src/drdg/
 │   ├── mil_saliency.py       # Local patch attention 2D spatial projection & smoothing
 │   ├── idrid_dataset.py      # Composite binary mask loader (MA, HE, EX, SE)
 │   └── metrics.py            # Quantitative Pointing Game, Area-Matched Recall, Pixel AUROC
-└── visualization/
-    └── paper_figures.py      # Publication-quality vector figures (300 DPI) & LaTeX tables
+├── experiments/
+│   ├── lodo.py               # 6-Fold LODO cross-domain benchmark orchestration
+│   ├── head_ablation.py      # 5-Head controlled ablation benchmark runner
+│   └── xai.py                # Quantitative XAI evaluation runner against IDRiD masks
+├── utils/
+│   ├── device.py             # Hardware device selection and automatic mixed precision
+│   ├── io.py                 # File I/O helpers and serializations
+│   ├── logging.py            # Formatted research logging utility
+│   └── seed.py               # Multi-framework deterministic seed setter
+├── visualization/
+│   └── paper_figures.py      # Publication-quality vector figures (300 DPI) & LaTeX tables
+├── notebooks/
+│   ├── 01_merge_dataset_lodo.ipynb        # 6-Fold LODO dataset harmonization & CSV generation
+│   ├── 02_merge-dataset.ipynb             # Multi-center dataset merging & pooled splitting
+│   ├── 03_main_model.ipynb                # Champion V3 Dual-Branch training & validation
+│   ├── 04_head_ablation.ipynb             # 5-Head controlled ablation study & calibration
+│   └── 05_component_analysis_lodo.ipynb   # Component analysis & cross-domain LODO benchmark
+└── documents/
+    ├── proposed-framework.pdf# High-resolution architectural framework diagram (PDF)
+    └── proposed-framework.png# High-resolution architectural framework diagram (PNG)
 ```
 
 ---
 
 ## 🔬 Multi-Center Clinical Benchmark (6 Cohorts)
 
-| Cohort | Origin Country | Optical Device / FOV | Total Images (Patients) | Grade Distribution (%) [$G_0 / G_1 / G_2 / G_3 / G_4$] |
-| :--- | :--- | :--- | :--- | :--- |
-| **APTOS 2019** | India | Zeiss, Topcon ($45^\circ$) | 3,662 (3,662) | 49.3 / 10.1 / 27.3 / 5.3 / 8.1 |
-| **DDR** | China | Canon CR-2, Topcon ($45^\circ$) | 12,522 (12,522) | 50.0 / 5.0 / 35.8 / 1.9 / 7.3 |
-| **DeepDRiD** | China | Topcon TRC-NW400 ($45^\circ$) | 2,000 (500) | 34.0 / 17.8 / 19.6 / 19.6 / 9.0 |
-| **IDRiD** | India | Kowa VX-10$\alpha$ ($50^\circ$) | 516 (516) | 32.6 / 6.2 / 41.3 / 17.8 / 2.1 |
-| **Messidor-2** | France | Topcon TRC-NW6 ($45^\circ$) | 1,748 (874) | 58.1 / 15.4 / 19.9 / 4.3 / 2.3 |
-| **EyePACS** | USA | Multiple telemedical ($45^\circ$) | 35,122 (17,561) | 73.5 / 6.9 / 15.0 / 2.5 / 2.1 |
+| Cohort | Country | Device / FOV | Images (Patients) | Grade Distribution (%) [$G_0$ / $G_1$ / $G_2$ / $G_3$ / $G_4$] | Grading Protocol |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **APTOS 2019** | India | Zeiss, Topcon ($45^\circ$) | 3,662 (3,662) | 49.3 / 10.1 / 27.3 / 5.3 / 8.1 | Single-grader ICDR |
+| **DDR** | China | Canon CR-2, Topcon ($45^\circ$) | 12,522 (12,522) | 50.0 / 5.0 / 35.8 / 1.9 / 7.3 | Multi-expert consensus |
+| **DeepDRiD** | China | Topcon TRC-NW400 ($45^\circ$) | 2,000 (500) | 34.0 / 17.8 / 19.6 / 19.6 / 9.0 | 2-field paired stereoscopic |
+| **IDRiD** | India | Kowa VX-10$\alpha$ ($50^\circ$) | 516 (516) | 32.6 / 4.8 / 32.6 / 18.0 / 12.0 | Multi-expert + lesion masks |
+| **Messidor-2** | France | Topcon TRC NW6 ($45^\circ$) | 1,744 (711) | 58.3 / 15.5 / 19.9 / 4.3 / 2.0 | Multi-grader consensus |
+| **EyePACS** | USA | Centervue, Canon ($45^\circ$) | 35,126 (17,563) | 73.5 / 7.0 / 15.1 / 2.5 / 2.0 | Real-world tele-screening |
+| **Total / Harmonized** | Multi | Diverse Multi-Vendor ($45^\circ$--$50^\circ$) | **55,570 (35,474)** | **64.3 / 7.4 / 21.0 / 3.4 / 3.9** | **Harmonized ICDR 5-grade scale** |
 
 ---
 
@@ -161,58 +181,55 @@ src/drdg/
 ### 1. Installation
 
 ```bash
-git clone https://github.com/baohuy2209/deep-learning-for-computer-vision.git
-cd deep-learning-for-computer-vision
+git clone https://github.com/baohuy2209/DR-ICCPR2026.git
+cd DR-ICCPR2026
 pip install -e .
 ```
 
 ### 2. Dual-Layer Execution Protocol
-- **Self-Contained Research Notebooks**: The 5 reference Jupyter notebooks in [`notebooks/`](notebooks/) remain complete and 100% self-contained for interactive experimentation and provenance without requiring `drdg` package imports.
-- **Modular Python CLI**: `drdg` provides high-throughput, cluster-ready CLI entry points for automated multi-fold benchmarks, ablations, and CI testing.
 
-### 3. Automated Notebook & Parity Verification
+- **Interactive Self-Contained Research Notebooks**: All reference Jupyter notebooks in [`notebooks/`](notebooks/) are completely self-contained with full data pipelines, training loops, and validation metrics implemented in code cells, allowing instant execution on Google Colab or Kaggle:
+  - [`notebooks/01_merge_dataset_lodo.ipynb`](notebooks/01_merge_dataset_lodo.ipynb): Harmonizes 6 multi-center cohorts and generates 18 patient-isolated LODO split CSV files.
+  - [`notebooks/02_merge-dataset.ipynb`](notebooks/02_merge-dataset.ipynb): Aggregates multi-center cohorts for standard pooled 70/15/15 cross-validation.
+  - [`notebooks/03_main_model.ipynb`](notebooks/03_main_model.ipynb): Trains the full Champion V3 Dual-Branch architecture (ResNet-50 + EffNet-B0 MIL + CLM QWK).
+  - [`notebooks/04_head_ablation.ipynb`](notebooks/04_head_ablation.ipynb): Executes the 5-head controlled ablation study and generates screening calibration curves.
+  - [`notebooks/05_component_analysis_lodo.ipynb`](notebooks/05_component_analysis_lodo.ipynb): Runs full component analysis and 6-Fold cross-domain LODO benchmark evaluation.
 
-```bash
-# Verify all 5 canonical research notebooks remain complete and untampered
-python scripts/verify_notebook_integrity.py
+- **Modular Python Experiment Runners**: For batch training, cluster execution, and automated evaluation, use the dedicated runners in [`experiments/`](experiments/):
 
-# Execute full numerical and architectural parity test suite
-pytest tests/parity -v
-```
+```python
+# 1. Running 6-Fold LODO Cross-Domain Benchmark
+from experiments.lodo import LODOExperimentRunner
 
-### 4. Running 6-Fold LODO Cross-Domain Benchmark
+runner = LODOExperimentRunner(variant="v3", dry_run=False, device="cuda")
+results = runner.run()
 
-```bash
-# Run proposed variant V3 on held-out target cohort (e.g., APTOS 2019)
-python scripts/run_lodo.py --variant v3 --held-out aptos --device cuda
+# 2. Running 5-Head Controlled Ablation Suite
+from experiments.head_ablation import HeadAblationRunner
 
-# Dry-run validation (CPU verification without full image dataset)
-python scripts/run_lodo.py --variant v3 --held-out aptos --dry-run --device cpu
-```
+ablation = HeadAblationRunner(all_heads=True, device="cuda")
+ablation_results = ablation.run()
 
-### 5. Running 5-Head Controlled Ablation Suite
+# 3. Quantitative XAI Evaluation against IDRiD Pixel Ground Truth
+from experiments.xai import QuantitativeXAIRunner
 
-```bash
-# Benchmark all 5 prediction heads on standardized ResNet-50 features
-python scripts/run_head_ablation.py --all-heads --device cuda
-
-# Benchmark individual champion CLM head
-python scripts/run_head_ablation.py --head clm_qwk --device cuda
-```
-
-### 6. Quantitative XAI Evaluation against IDRiD Pixel Masks
-
-```bash
-python scripts/run_xai.py --variant v3 --checkpoint checkpoints/v3_best.pt --device cuda
+xai = QuantitativeXAIRunner(
+    variant="v3",
+    checkpoint_path="checkpoints/v3_best.pt",
+    device="cuda"
+)
+xai_results = xai.run()
 ```
 
 ---
 
-## 📜 Traceability & Documentation Index
+## 📜 Documentation & Core Module Traceability
 
-- [`NOTEBOOK_CODE_MAP.md`](../../docs/NOTEBOOK_CODE_MAP.md): 100% symbol mapping between canonical notebooks and `drdg`.
-- [`DATA_FLOW_AUDIT.md`](../../docs/DATA_FLOW_AUDIT.md): Producer-consumer data flow matrix across all 6 research stages.
-- [`REFACTOR_AUDIT.md`](../../docs/REFACTOR_AUDIT.md): Discrepancy audit log (AUD-001 through AUD-013) with certified status **`VERIFIED`**.
-- [`ARCHITECTURE.md`](../../docs/ARCHITECTURE.md): Mathematical derivation of Cumulative Link Models, attention mechanisms, and fusion.
-- [`DATA.md`](../../docs/DATA.md): Detailed multi-cohort documentation, 18 LODO fold CSVs, and FOV extraction.
-- [`RESULTS_SCHEMA.md`](../../docs/RESULTS_SCHEMA.md): Bipartite evaluation JSON serialization contract.
+The core mathematical, architectural, and evaluation methodologies are directly traceable to the modular components:
+
+- **Standalone Extraction Guide**: [`STANDALONE_REPO_GUIDE.md`](STANDALONE_REPO_GUIDE.md) documents repository extraction, replication philosophy, and notebook self-containment.
+- **System Architecture & PDF**: [`documents/proposed-framework.pdf`](documents/proposed-framework.pdf) provides the complete vector-grade architectural schematic.
+- **Cumulative Link Models & Continuous QWK**: Implemented in [`models/heads/clm.py`](models/heads/clm.py) and [`losses/qwk.py`](losses/qwk.py) with strictly monotonic cutpoints.
+- **Dual-Branch Backbone & Fusion**: Implemented in [`models/streams/`](models/streams/), [`models/attention/`](models/attention/), and [`models/fusion.py`](models/fusion.py).
+- **Patient Isolation & LODO Protocol**: Guaranteed in [`data/patient_ids.py`](data/patient_ids.py) and [`data/lodo.py`](data/lodo.py) with zero train/val patient leakage.
+- **Formal Evaluation Schema**: Serialized via [`evaluation/result_schema.py`](evaluation/result_schema.py) enforcing reproducible metric logging.
